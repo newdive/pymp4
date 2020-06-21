@@ -309,6 +309,43 @@ DataReferenceBox = Struct(
     "data_entries" / PrefixedArray(Int32ub, Select(DataEntryUrnBox, DataEntryUrlBox)),
 )
 
+MP4ASampleExtensionBox = PrefixedIncludingSize(Int32ub,Struct(
+    "type" / String(4, padchar=b" ", paddir="right"),
+    Embedded(Switch(this.type, {
+        # elementary stream description
+        b'esds':Struct(
+            "version" / Default(Int8ub, 0),
+            "flags" /  Default(construct.Int24ub, 0),
+            "odType" / Int8ub,
+            "detail" / Switch(this.odType,{
+                3 : Struct(
+                    "length" / VarIntB(),  # little endian varint to big endian 
+                    "esId" / Int16ub,
+                    "flags" / Int8ub,
+                    "esType" / Int8ub,
+                    "detail" / Switch(this.esType,{
+                        4 : Struct(
+                            "length" / VarIntB(),
+                            "objectProfileIndication" / Int8ub,
+                            "flags" / Int8ub,
+                            "bufferSize" / Int24ub,
+                            "maxBitrate" / Int32ub,
+                            "avgBitrate" / Int32ub,
+                            "ascType" / Int8ub,
+                            "detail" / Switch(this.ascType,{
+                                5 : Struct(                            
+                                    "length" / VarIntB(),
+                                    "specificInfo" / GreedyBytes
+                                )
+                            },default=GreedyBytes)
+                        )
+                    },default=GreedyBytes)
+                )
+            },default=GreedyBytes)
+        )
+    }, default=Struct(RawBox)))
+))
+
 # Sample Table boxes (stbl)
 
 MP4ASampleEntryBox = Struct(
@@ -320,7 +357,8 @@ MP4ASampleEntryBox = Struct(
     "compression_id" / Default(Int16sb, 0),
     "packet_size" / Const(Int16ub, 0),
     "sampling_rate" / Int16ub,
-    Padding(2)
+    Padding(2),
+    "extensions" / GreedyRange(MP4ASampleExtensionBox)
 )
 
 
