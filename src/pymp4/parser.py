@@ -266,7 +266,7 @@ HandlerReferenceBox = Struct(
     Padding(4, pattern=b"\x00"),
     "handler_type" / String(4),
     Padding(12, pattern=b"\x00"),  # Int32ub[3]
-    "name" / CString(encoding="utf8")
+    "name" / CString(encoding="unicode_escape")
 )
 
 # Boxes contained by Media Info Box
@@ -289,7 +289,7 @@ DataEntryUrlBox = PrefixedIncludingSize(Int32ub, Struct(
     "flags" / BitStruct(
         Padding(23), "self_contained" / Rebuild(Flag, ~this._.location)
     ),
-    "location" / If(~this.flags.self_contained, CString(encoding="utf8")),
+    "location" / If(~this.flags.self_contained, CString(encoding="unicode_escape")),
 ))
 
 DataEntryUrnBox = PrefixedIncludingSize(Int32ub, Struct(
@@ -298,8 +298,8 @@ DataEntryUrnBox = PrefixedIncludingSize(Int32ub, Struct(
     "flags" / BitStruct(
         Padding(23), "self_contained" / Rebuild(Flag, ~(this._.name & this._.location))
     ),
-    "name" / If(this.flags == 0, CString(encoding="utf8")),
-    "location" / If(this.flags == 0, CString(encoding="utf8")),
+    "name" / If(this.flags == 0, CString(encoding="unicode_escape")),
+    "location" / If(this.flags == 0, CString(encoding="unicode_escape")),
 ))
 
 DataReferenceBox = Struct(
