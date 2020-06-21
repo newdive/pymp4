@@ -79,6 +79,38 @@ class PrefixedIncludingSize(Subconstruct):
     def _sizeof(self, context, path):
         return self.lengthfield._sizeof(context, path) + self.subcon._sizeof(context, path)
 
+
+class VarIntB(Construct):
+    r'''
+    VarInt in big-endian
+    original implementation of VarInt is following the rules of google protobuf 
+    but in MPEG file ,all data are in big-endian 
+    '''
+    def _parse(self, stream, context, path):
+        num = 0
+        acc = []
+        while True:
+            b = ord(construct.core._read_stream(stream, 1))
+            acc.append(b & 0x7F)
+            if not b & 0x80:
+                break
+        for b in acc:
+            num = (num << 7) | b
+        return num
+    def _build(self, obj, stream, context, path):
+        if obj < 0:
+            raise ValueError("varint cannot build from negative number")
+        writeBuff = []
+        while obj > 0x7F:
+            writeBuff.insert(0, obj & 0x7F)
+            obj >>= 7
+        writeBuff.insert(0, obj & 0x7F)
+        for i in range(4-len(writeBuff)&0x3):
+            construct.core._write_stream(stream, 1, bytes((0x80,)))
+        for idx,val in enumerate(writeBuff):
+            val = 0x80|val if idx<len(writeBuff)-1 else val&0x7F
+            construct.core._write_stream(stream, 1, bytes((val,)))
+      
 # Header box
 
 FileTypeBox = Struct(
